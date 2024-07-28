@@ -16,14 +16,22 @@ def crawl():
         if 'instagram.com' in main_url:
             content = extract_content_instagram(main_url)
             places = extract_place_names(content)
-            all_candidates = crawl_and_extract_places(places)
-            response = jsonify({"content": content, "places": places, "candidates": all_candidates})
+            if places:
+                all_candidates = crawl_and_extract_places(places)
+                response = jsonify({"content": content, "places": places, "candidates": all_candidates})
+            else:
+                response = jsonify({"error": "본문에 장소명이 포함되어 있지 않습니다."})
+                return response, 400
 
-        elif 'naver.com' in main_url:
+        elif 'blog.naver.com' in main_url:
             title, content = extract_content_naver(main_url)
             places = extract_place_names(content)
-            all_candidates = crawl_and_extract_places(places)
-            response = jsonify({"title": title, "places": places, "candidates": all_candidates})
+            if places:
+                all_candidates = crawl_and_extract_places(places)
+                response = jsonify({"title": title, "places": places, "candidates": all_candidates})
+            else:
+                response = jsonify({"error": "본문에 장소명이 포함되어 있지 않습니다."})
+                return response, 400
 
         else:
             response = jsonify({"error": "Invalid URL"})
