@@ -20,8 +20,7 @@ def crawl():
                 all_candidates = crawl_and_extract_places(places)
                 response = jsonify({"content": content, "places": places, "candidates": all_candidates})
             else:
-                response = jsonify({"error": "본문에 장소명이 포함되어 있지 않습니다."})
-                return response, 400
+                return jsonify({"error": "본문에 장소명이 포함되어 있지 않습니다."}), 400
 
         elif 'blog.naver.com' in main_url:
             title, content = extract_content_naver(main_url)
@@ -30,12 +29,10 @@ def crawl():
                 all_candidates = crawl_and_extract_places(places)
                 response = jsonify({"title": title, "places": places, "candidates": all_candidates})
             else:
-                response = jsonify({"error": "본문에 장소명이 포함되어 있지 않습니다."})
-                return response, 400
+                return jsonify({"error": "본문에 장소명이 포함되어 있지 않습니다."}), 400
 
         else:
-            response = jsonify({"error": "Invalid URL"})
-            return response, 400
+            return jsonify({"error": "Invalid URL"}), 400
 
         response.headers.add('Content-Type', 'application/json; charset=utf-8')
 
