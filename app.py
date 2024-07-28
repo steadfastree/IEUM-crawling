@@ -19,11 +19,15 @@ def crawl():
             all_candidates = crawl_and_extract_places(places)
             response = jsonify({"content": content, "places": places, "candidates": all_candidates})
 
-        else:
+        elif 'naver.com' in main_url:
             title, content = extract_content_naver(main_url)
             places = extract_place_names(content)
             all_candidates = crawl_and_extract_places(places)
             response = jsonify({"title": title, "places": places, "candidates": all_candidates})
+
+        else:
+            response = jsonify({"error": "Invalid URL"})
+            return response, 400
 
         response.headers.add('Content-Type', 'application/json; charset=utf-8')
 
