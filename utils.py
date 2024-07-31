@@ -142,8 +142,8 @@ def extract_content_naver(main_url):
         p_tag_addr_list = soup.find_all('p', class_='se-map-address')
         for place_addr in p_tag_addr_list:
             addr_list.append(place_addr.get_text(strip=True))
-        pprint.pprint(name_list)
-        pprint.pprint(addr_list)
+
+        keyword_list = [f"{addr}, {name}" for name, addr in zip(name_list, addr_list)]
 
         # 제목 텍스트 추출
         title_div = soup.find('div', class_='se-module se-module-text se-title-text')
@@ -153,7 +153,7 @@ def extract_content_naver(main_url):
         content_div = soup.find('div', class_='se-main-container')
         content_text = content_div.get_text(strip=True) if content_div else 'Content not found'
 
-        return title_text, content_text
+        return title_text, content_text, keyword_list
 
     except requests.RequestException as e:
         raise Exception(f"HTTP Request error: {e}")

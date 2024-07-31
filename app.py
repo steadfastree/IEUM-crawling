@@ -19,22 +19,36 @@ def crawl():
         if link_type == 0 and 'instagram.com' in main_url:
             content = extract_content_instagram(main_url)
             places = extract_place_names(content)
+            if places:
+                all_candidates = crawl_and_extract_places(places)
+                response = jsonify({
+                    "userUuid": user_uuid,
+                    "collectionType": link_type,
+                    "link": main_url,
+                    "content": content,
+                    "placeKeywords": places,
+                    "candidates": all_candidates
+                })
+                response.headers.add('Content-Type', 'application/json; charset=utf-8')
+                return response, 200
+
         elif link_type == 1 and 'blog.naver.com' in main_url:
-            content, main_content = extract_content_naver(main_url)
+            content, main_content, keyword_list = extract_content_naver(main_url)
             places = extract_place_names(main_content)
+            if places:
+                # all_candidates = crawl_and_extract_places(places)
+                response = jsonify({
+                    "userUuid": user_uuid,
+                    "collectionType": link_type,
+                    "link": main_url,
+                    "content": content,
+                    "placeKeywords": keyword_list
+                })
+                response.headers.add('Content-Type', 'application/json; charset=utf-8')
+                return response, 200
         else:
             return jsonify({"error": "Invalid URL"}), 400
 
-        if places:
-            all_candidates = crawl_and_extract_places(places)
-            response = jsonify({
-                "userUuid": user_uuid,
-                "collectionType": link_type,
-                "link": main_url,
-                "content": content,
-                "placeKeywords": places,
-                "candidates": all_candidates
-            })
             # payload = {
             #     "userUuid": user_uuid,
             #     "collectionType": link_type,
@@ -52,11 +66,8 @@ def crawl():
             #
             # # 다른 서버에서 받은 응답을 클라이언트에 반환
             # return response.json(), response.status_code
-        else:
-            return jsonify({"error": "본문에 장소명이 포함되어 있지 않습니다."}), 400
-
-        response.headers.add('Content-Type', 'application/json; charset=utf-8')
-        return response, 200
+        # else:
+        #     return jsonify({"error": "본문에 장소명이 포함되어 있지 않습니다."}), 400
 
     except ValueError as ve:
         # URL 파라미터가 누락된 경우
