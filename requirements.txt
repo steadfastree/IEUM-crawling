@@ -5,8 +5,10 @@ beautifulsoup4==4.12.3
 blinker==1.8.2
 bs4==0.0.2
 certifi==2024.7.4
+cffi==1.16.0
 charset-normalizer==3.3.2
 click==8.1.7
+cryptography==43.0.0
 distro==1.9.0
 exceptiongroup==1.2.2
 filelock==3.15.4
@@ -26,9 +28,11 @@ numpy==2.0.1
 packaging==24.1
 pandas==2.2.2
 pillow==10.4.0
+pycparser==2.22
 pydantic==2.8.2
 pydantic_core==2.20.1
 PyKakao==0.0.7
+pyOpenSSL==24.2.1
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 pytz==2024.1

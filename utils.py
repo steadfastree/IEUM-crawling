@@ -116,7 +116,11 @@ def extract_content_naver(main_url):
         # iframe URL 추출
         iframe = soup.find('iframe', id='mainFrame')
         if iframe:
-            iframe_url = 'https://blog.naver.com' + iframe['src']
+            iframe_src = iframe['src']
+            if iframe_src.startswith('http'):
+                iframe_url = iframe_src
+            else:
+                iframe_url = 'https://blog.naver.com' + iframe_src
         else:
             raise ValueError("Iframe not found")
 

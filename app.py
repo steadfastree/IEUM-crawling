@@ -5,37 +5,40 @@ from utils import *
 app = Flask(__name__)
 
 
-@app.route('/', methods=["GET"])
+@app.route('/', methods=["POST"])
 def crawl():
     try:
-        main_url = request.args.get("url")
+        crawling_collection = request.get_json()
+        user_uuid = str(crawling_collection.get("userUuid"))
+        link_type = int(crawling_collection.get("collectionType"))
+        main_url = str(crawling_collection.get("link"))
 
         if not main_url:
             raise ValueError("URL parameter is missing.")
 
-        if 'instagram.com' in main_url:
+        if link_type == 0 and 'instagram.com' in main_url:
             content = extract_content_instagram(main_url)
             places = extract_place_names(content)
-            if places:
-                all_candidates = crawl_and_extract_places(places)
-                response = jsonify({"content": content, "places": places, "candidates": all_candidates})
-            else:
-                return jsonify({"error": "본문에 장소명이 포함되어 있지 않습니다."}), 400
-
-        elif 'blog.naver.com' in main_url:
-            title, content = extract_content_naver(main_url)
-            places = extract_place_names(content)
-            if places:
-                all_candidates = crawl_and_extract_places(places)
-                response = jsonify({"title": title, "places": places, "candidates": all_candidates})
-            else:
-                return jsonify({"error": "본문에 장소명이 포함되어 있지 않습니다."}), 400
-
+        elif link_type == 1 and 'blog.naver.com' in main_url:
+            content, main_content = extract_content_naver(main_url)
+            places = extract_place_names(main_content)
         else:
             return jsonify({"error": "Invalid URL"}), 400
 
-        response.headers.add('Content-Type', 'application/json; charset=utf-8')
+        if places:
+            all_candidates = crawl_and_extract_places(places)
+            response = jsonify({
+                "userUuid": user_uuid,
+                "collectionType": link_type,
+                "link": main_url,
+                "content": content,
+                "placeKeywords": places,
+                "candidates": all_candidates
+            })
+        else:
+            return jsonify({"error": "본문에 장소명이 포함되어 있지 않습니다."}), 400
 
+        response.headers.add('Content-Type', 'application/json; charset=utf-8')
         return response, 200
 
     except ValueError as ve:
