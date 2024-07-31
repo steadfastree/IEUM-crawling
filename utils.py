@@ -131,7 +131,7 @@ def extract_content_naver(main_url):
         response.raise_for_status()  # HTTP 오류 발생 시 예외 발생
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # strong, p 태그의 장소명, 주소 데이터 추출
+        # 블로그 본문에 지도가 첨부되어 있는 경우: strong, p 태그의 장소명, 주소 데이터 추출
         name_list = []
         addr_list = []
 
@@ -176,41 +176,11 @@ def search_place_kakao(keyword):
         raise Exception(f"An unexpected error occurred: {e}")
 
 
-# 카카오맵 검색 결과(장소 리스트 추출)
-def get_place_candidates(place_names):
-    all_candidates = {}
-    for place_name in place_names:
-        if not place_name.strip():
-            continue
-        try:
-            # 장소명이 정확히 매칭될 수 있도록 검색어를 잘 지정
-            search_results = search_place_kakao(place_name)
-            if search_results is not None and not search_results.empty:
-                candidates = search_results.head(4)  # 상위 4개 장소 후보 가져오기
-                candidate_list = []
-                for index, place in candidates.iterrows():
-                    candidate = {
-                        "Place Name": place['place_name'],
-                        "Address": place['address_name'],
-                        "Road Address": place['road_address_name'],
-                        "Place URL": place['place_url']
-                    }
-                    candidate_list.append(candidate)
-                all_candidates[place_name] = candidate_list
-            else:
-                all_candidates[place_name] = "[해당 키워드는 결과 확인 불가]"
-        except Exception as e:
-            all_candidates[place_name] = f"Error occurred: {e}"
-    return all_candidates
-
-
 def crawl_and_extract_places(places):
     try:
         # 복합적으로 추출된 장소명 분리
         separated_places = places.split(', ')
 
-        # 장소명 후보 리스트 추출
-        # place_candidates = get_place_candidates(separated_places)
         return separated_places
     except Exception as e:
         raise Exception(f"An error occurred while extracting places: {e}")
