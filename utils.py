@@ -1,4 +1,6 @@
 import os
+import json
+import pprint
 
 import requests
 from bs4 import BeautifulSoup
@@ -50,7 +52,7 @@ class CompletionExecutor:
 def extract_place_names(text):
     # 프롬프트 설정
     prompt = f"""
-    주어진 본문에서 집중하여 설명하고 있는 장소명를 모두 추출해주세요.
+    주어진 제목 혹은 본문에서 문장에서 구체적인 장소명을 추출해주세요.
 
     본문:
     {text}
@@ -109,7 +111,7 @@ def extract_content_instagram(url):
 def extract_content_naver(main_url):
     try:
         # 첫 번째 요청: 메인 페이지에서 iframe URL 추출
-        response = requests.get(main_url)
+        response = requests.get(main_url, verify=False)
         response.raise_for_status()  # HTTP 오류 발생 시 예외 발생
         soup = BeautifulSoup(response.text, 'html.parser')
 
@@ -128,6 +130,20 @@ def extract_content_naver(main_url):
         response = requests.get(iframe_url)
         response.raise_for_status()  # HTTP 오류 발생 시 예외 발생
         soup = BeautifulSoup(response.text, 'html.parser')
+
+        # strong, p 태그의 장소명, 주소 데이터 추출
+        name_list = []
+        addr_list = []
+
+        strong_tag_name_list = soup.find_all('strong', class_='se-map-title')
+        for place_name in strong_tag_name_list:
+            name_list.append(place_name.get_text(strip=True))
+
+        p_tag_addr_list = soup.find_all('p', class_='se-map-address')
+        for place_addr in p_tag_addr_list:
+            addr_list.append(place_addr.get_text(strip=True))
+        pprint.pprint(name_list)
+        pprint.pprint(addr_list)
 
         # 제목 텍스트 추출
         title_div = soup.find('div', class_='se-module se-module-text se-title-text')
@@ -194,7 +210,7 @@ def crawl_and_extract_places(places):
         separated_places = places.split(', ')
 
         # 장소명 후보 리스트 추출
-        place_candidates = get_place_candidates(separated_places)
-        return place_candidates
+        # place_candidates = get_place_candidates(separated_places)
+        return separated_places
     except Exception as e:
         raise Exception(f"An error occurred while extracting places: {e}")
