@@ -35,6 +35,23 @@ def crawl():
                 "placeKeywords": places,
                 "candidates": all_candidates
             })
+            # payload = {
+            #     "userUuid": user_uuid,
+            #     "collectionType": link_type,
+            #     "link": main_url,
+            #     "content": content,
+            #     "placeKeywords": places,
+            #     "candidates": all_candidates
+            # }
+            #
+            # # 다른 서버의 API 엔드포인트 URL 설정
+            # main_server = "http://other-server/api/endpoint"  # 실제 URL로 교체
+            #
+            # # 다른 서버로 POST 요청 보내기
+            # response = requests.post(main_server, json=payload)
+            #
+            # # 다른 서버에서 받은 응답을 클라이언트에 반환
+            # return response.json(), response.status_code
         else:
             return jsonify({"error": "본문에 장소명이 포함되어 있지 않습니다."}), 400
 
