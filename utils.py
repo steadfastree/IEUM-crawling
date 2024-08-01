@@ -51,14 +51,24 @@ class CompletionExecutor:
 # 장소(본문)추출 함수
 def extract_place_names(text):
     # 프롬프트 설정
-    prompt = f"""
-    주어진 제목 혹은 본문에서 문장에서 구체적인 장소명을 추출해주세요.
-
-    본문:
-    {text}
-
-    장소명:
-    """
+    if type(text) == str:
+        prompt = f"""
+        주어진 글에서 설명하고 있는 구체적인 장소명만을 출력해주세요.
+    
+        본문:
+        {text}
+    
+        장소명:
+        """
+    else:
+        prompt = f"""
+        주어진 리스트에서 대한민국 행정구역 시/군/구/읍/면/리에 해당하는 것들을 제외한 특정 구체적인 장소명만을 출력해주세요.
+    
+        본문:
+        {text}
+    
+        장소명:
+        """
 
     # 클로바 API 실행
     completion_executor = CompletionExecutor(
@@ -69,9 +79,15 @@ def extract_place_names(text):
     )
 
     try:
+        place_names = []
         result = completion_executor.execute(prompt)
         content = result.get('result', {}).get('message', {}).get('content', 'No content found')
-        return content
+        if content:
+            if content.startswith('장소명:'):
+                content = content.replace('장소명:', '')
+            place_names = [place.strip() for place in content.replace('-', '').replace('\n', ',').split(',') if place.strip()]
+        return place_names
+
     except KeyError as e:
         raise Exception(f"KeyError: {e} - The expected key was not found in the result.")
     except Exception as e:
@@ -87,6 +103,19 @@ def is_valid_url(url):
     except requests.RequestException as e:
         print(f"URL validation error: {e}")
         return False
+
+
+# 카카오맵 API, 장소 검색
+def search_place_kakao(keyword):
+    api = Local(service_key=os.getenv('KAKAO_SERVICE_KEY'))
+    try:
+        df = api.search_keyword(keyword, dataframe=True)
+        return df
+    except requests.exceptions.RequestException as e:
+        print(f"Request error: {e}")
+        return pd.DataFrame()
+    except Exception as e:
+        raise Exception(f"An unexpected error occurred: {e}")
 
 
 # Instagram 본문 추출 함수
@@ -105,6 +134,33 @@ def extract_content_instagram(url):
         raise Exception(f"HTTP Request error: {e}")
     except Exception as e:
         raise Exception(f"An unexpected error occurred: {e}")
+
+
+def extract_place_keywords_from_naver(soup, text):
+    name_list = []
+    addr_list = []
+    keyword_list = []
+
+    # 블로그 본문에 지도가 첨부되어 있는 경우: strong, p 태그의 장소명, 주소 데이터 추출
+    strong_tag_name_list = soup.find_all('strong', class_='se-map-title')
+    if strong_tag_name_list:
+        for place_name in strong_tag_name_list:
+            name_list.append(place_name.get_text(strip=True))
+
+        p_tag_addr_list = soup.find_all('p', class_='se-map-address')
+        for place_addr in p_tag_addr_list:
+            addr_list.append(place_addr.get_text(strip=True))
+
+        keyword_list = [f"{addr}, {name}" for name, addr in zip(name_list, addr_list)]
+
+    # 블로그 본문에 지도가 첨부되어 있지 않는 경우: 클로바 API 호출하기
+    else:
+        temp = extract_place_names(text)
+        keyword_list = extract_place_names(temp)
+
+    print(keyword_list)
+
+    return keyword_list
 
 
 # Naver 제목, 본문 추출 함수
@@ -131,20 +187,6 @@ def extract_content_naver(main_url):
         response.raise_for_status()  # HTTP 오류 발생 시 예외 발생
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # 블로그 본문에 지도가 첨부되어 있는 경우: strong, p 태그의 장소명, 주소 데이터 추출
-        name_list = []
-        addr_list = []
-
-        strong_tag_name_list = soup.find_all('strong', class_='se-map-title')
-        for place_name in strong_tag_name_list:
-            name_list.append(place_name.get_text(strip=True))
-
-        p_tag_addr_list = soup.find_all('p', class_='se-map-address')
-        for place_addr in p_tag_addr_list:
-            addr_list.append(place_addr.get_text(strip=True))
-
-        keyword_list = [f"{addr}, {name}" for name, addr in zip(name_list, addr_list)]
-
         # 제목 텍스트 추출
         title_div = soup.find('div', class_='se-module se-module-text se-title-text')
         title_text = title_div.get_text(strip=True) if title_div else 'Title not found'
@@ -152,6 +194,9 @@ def extract_content_naver(main_url):
         # 본문 텍스트 추출
         content_div = soup.find('div', class_='se-main-container')
         content_text = content_div.get_text(strip=True) if content_div else 'Content not found'
+
+        # 블로그 본문에서 장소명+주소 키워드 리스트 추출
+        keyword_list = extract_place_keywords_from_naver(soup, content_text)
 
         return title_text, content_text, keyword_list
 
@@ -163,24 +208,11 @@ def extract_content_naver(main_url):
         raise Exception(f"An unexpected error occurred: {e}")
 
 
-# 카카오맵 API, 장소 검색
-def search_place_kakao(keyword):
-    api = Local(service_key=os.getenv('KAKAO_SERVICE_KEY'))
-    try:
-        df = api.search_keyword(keyword, dataframe=True)
-        return df
-    except requests.exceptions.RequestException as e:
-        print(f"Request error: {e}")
-        return pd.DataFrame()
-    except Exception as e:
-        raise Exception(f"An unexpected error occurred: {e}")
-
-
-def crawl_and_extract_places(places):
-    try:
-        # 복합적으로 추출된 장소명 분리
-        separated_places = places.split(', ')
-
-        return separated_places
-    except Exception as e:
-        raise Exception(f"An error occurred while extracting places: {e}")
+# def crawl_and_extract_places(places):
+#     try:
+#         # 복합적으로 추출된 장소명 분리
+#         separated_places = places.split(', ')
+#
+#         return separated_places
+#     except Exception as e:
+#         raise Exception(f"An error occurred while extracting places: {e}")

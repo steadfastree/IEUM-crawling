@@ -20,23 +20,21 @@ def crawl():
             content = extract_content_instagram(main_url)
             places = extract_place_names(content)
             if places:
-                all_candidates = crawl_and_extract_places(places)
+                # all_candidates = crawl_and_extract_places(places)
                 response = jsonify({
                     "userUuid": user_uuid,
                     "collectionType": link_type,
                     "link": main_url,
                     "content": content,
                     "placeKeywords": places,
-                    "candidates": all_candidates
+                    # "candidates": all_candidates
                 })
                 response.headers.add('Content-Type', 'application/json; charset=utf-8')
                 return response, 200
 
         elif link_type == 1 and 'blog.naver.com' in main_url:
             content, main_content, keyword_list = extract_content_naver(main_url)
-            places = extract_place_names(main_content)
-            if places:
-                # all_candidates = crawl_and_extract_places(places)
+            if keyword_list:
                 response = jsonify({
                     "userUuid": user_uuid,
                     "collectionType": link_type,
