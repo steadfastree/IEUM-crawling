@@ -63,6 +63,9 @@ def extract_place_names(text):
 
                 2) 주소가 존재하지 않을 때는:
                 남산타워, 불국사, 경복궁
+                
+                3) 장소명과 주소가 모두 존재하지 않을 때는:
+                장소명이 존재하지 않습니다.
 
             주의사항
             - 주소와 장소명은 반드시 대시 기호(-)로 구분합니다.
@@ -137,30 +140,51 @@ def extract_content_instagram(url):
 
 # 키워드 리스트에 불필요한 문자 및 공백 제거
 def clear_keyword_list(keyword_list, temp):
-    # '*' 및 불필요한 공백을 제거한 후 저장할 새로운 리스트
+    # 텍스트 정리 함수 정의
     def clean_text(text):
-        # '*' 제거 및 쉼표 앞뒤 공백 제거
-        return ','.join([part.rstrip() for part in text.replace('*', '').split(',')])
+        # '*'를 제거하고, 쉼표 전까지 텍스트에서 *와 그 주위 텍스트 제거
+        if '*' in text:
+            prefix = text.split('*')[0].rstrip()  # '*' 이전 부분
+            suffix = text.split(',')[-1].strip()  # 쉼표 이후 부분
+            return f"{prefix}, {suffix}"  # 쉼표 이후 부분만 반환
+        else:
+            # 일반적인 경우에는 공백 정리
+            return ', '.join([part.strip() for part in text.split(',')])
+
+    # 장소명을 간소화하는 함수 정의 (예: 공통된 키워드 추출)
+    def simplify_place_name(place_name):
+        # 특정 키워드만 사용하거나 공백 제거 등 간소화 작업
+        keywords = place_name.split()
+        # 여기서는 임의로 첫 번째 단어를 기준으로 간소화 (사용자 필요에 따라 조정 가능)
+        return keywords[0] if keywords else place_name
 
     # `keyword_list`와 `temp`의 요소를 정리한 리스트 생성
     cleaned_keyword_list = [clean_text(item) for item in keyword_list]
     cleaned_temp = [clean_text(item) for item in temp]
 
-    # 기존 `cleaned_keyword_list`의 장소명을 추출하여 중복 확인을 위한 집합 생성
+    # 기존 `cleaned_keyword_list`의 간소화된 장소명을 추출하여 중복 확인을 위한 집합 생성
     existing_places = set()
     for entry in cleaned_keyword_list:
         if ',' in entry:
             place_name = entry.split(', ')[-1]  # 쉼표 뒤의 장소명 추출
-            existing_places.add(place_name)
+            simplified_name = simplify_place_name(place_name)
+            existing_places.add(simplified_name)
 
     # `cleaned_temp` 리스트에서 중복되지 않는 항목 추가
     for item in cleaned_temp:
         if ',' in item:
             place_name = item.split(', ')[-1]  # 쉼표 뒤의 장소명 추출
-            if place_name not in existing_places:
+            simplified_name = simplify_place_name(place_name)
+            if simplified_name not in existing_places:
+                existing_places.add(simplified_name)
                 cleaned_keyword_list.append(item)
 
-    return cleaned_keyword_list
+    result = []
+    for cleaned in cleaned_keyword_list:
+        if '*' not in cleaned:
+            result.append(cleaned)
+
+    return result
 
 
 # 네이버 블로그에서 장소명 + 주소 키워드 추출

@@ -19,7 +19,7 @@ def crawl():
         if link_type == 0 and 'instagram.com' in main_url:
             content = extract_content_instagram(main_url)
             places = extract_place_names(content)
-            if places:
+            if places != ['장소명이 존재하지 않습니다.']:
                 cleaned_keyword_list = clear_keyword_list(places, [])
                 response = jsonify({
                     "userUuid": user_uuid,
@@ -30,10 +30,12 @@ def crawl():
                 })
                 response.headers.add('Content-Type', 'application/json; charset=utf-8')
                 return response, 200
+            else:
+                return jsonify({"error": "Place Not Found"}), 400
 
         elif link_type == 1 and 'blog.naver.com' in main_url:
             content, main_content, keyword_list = extract_content_naver(main_url)
-            if keyword_list:
+            if keyword_list != ['장소명이 존재하지 않습니다.']:
                 response = jsonify({
                     "userUuid": user_uuid,
                     "collectionType": link_type,
@@ -43,6 +45,8 @@ def crawl():
                 })
                 response.headers.add('Content-Type', 'application/json; charset=utf-8')
                 return response, 200
+            else:
+                return jsonify({"error": "Place Not Found"}), 400
         else:
             return jsonify({"error": "Invalid URL"}), 400
 
