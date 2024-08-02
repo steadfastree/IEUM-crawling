@@ -105,16 +105,16 @@ def extract_place_names(text):
 
 
 # 카카오맵 API, 장소 검색
-def search_place_kakao(keyword):
-    api = Local(service_key=os.getenv('KAKAO_SERVICE_KEY'))
-    try:
-        df = api.search_keyword(keyword, dataframe=True)
-        return df
-    except requests.exceptions.RequestException as e:
-        print(f"Request error: {e}")
-        return pd.DataFrame()
-    except Exception as e:
-        raise Exception(f"An unexpected error occurred: {e}")
+# def search_place_kakao(keyword):
+#     api = Local(service_key=os.getenv('KAKAO_SERVICE_KEY'))
+#     try:
+#         df = api.search_keyword(keyword, dataframe=True)
+#         return df
+#     except requests.exceptions.RequestException as e:
+#         print(f"Request error: {e}")
+#         return pd.DataFrame()
+#     except Exception as e:
+#         raise Exception(f"An unexpected error occurred: {e}")
 
 
 # Instagram 본문 추출 함수
@@ -135,6 +135,7 @@ def extract_content_instagram(url):
         raise Exception(f"An unexpected error occurred: {e}")
 
 
+# 키워드 리스트에 불필요한 문자 및 공백 제거
 def clear_keyword_list(keyword_list, temp):
     # '*' 및 불필요한 공백을 제거한 후 저장할 새로운 리스트
     def clean_text(text):
@@ -162,6 +163,7 @@ def clear_keyword_list(keyword_list, temp):
     return cleaned_keyword_list
 
 
+# 네이버 블로그에서 장소명 + 주소 키워드 추출
 def extract_place_keywords_from_naver(soup, text):
     name_list = []
     addr_list = []
