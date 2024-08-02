@@ -20,14 +20,13 @@ def crawl():
             content = extract_content_instagram(main_url)
             places = extract_place_names(content)
             if places:
-                # all_candidates = crawl_and_extract_places(places)
+                cleaned_keyword_list = clear_keyword_list(places, [])
                 response = jsonify({
                     "userUuid": user_uuid,
                     "collectionType": link_type,
                     "link": main_url,
                     "content": content,
-                    "placeKeywords": places,
-                    # "candidates": all_candidates
+                    "placeKeywords": cleaned_keyword_list
                 })
                 response.headers.add('Content-Type', 'application/json; charset=utf-8')
                 return response, 200

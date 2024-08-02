@@ -1,6 +1,4 @@
 import os
-import json
-import pprint
 
 import requests
 from bs4 import BeautifulSoup
@@ -48,27 +46,34 @@ class CompletionExecutor:
             raise Exception(f"An unexpected error occurred: {e}")
 
 
+#
 # 장소(본문)추출 함수
 def extract_place_names(text):
     # 프롬프트 설정
-    if type(text) == str:
-        prompt = f"""
-        주어진 글에서 설명하고 있는 구체적인 장소명만을 출력해주세요.
-    
-        본문:
-        {text}
-    
-        장소명:
-        """
-    else:
-        prompt = f"""
-        주어진 리스트에서 대한민국 행정구역 시/군/구/읍/면/리에 해당하는 것들을 제외한 특정 구체적인 장소명만을 출력해주세요.
-    
-        본문:
-        {text}
-    
-        장소명:
-        """
+    prompt = f"""
+            주어진 글에서 설명하고 있는 모든 장소명과 주소를 각각 추출하세요. 각 장소명과 주소는 다음과 같은 형식으로 구분합니다:
+
+            - 주소가 존재하는 경우: '주소 - 장소명'
+            - 주소가 존재하지 않는 경우: '장소명'
+            - 추출된 정보는 쉼표(,)로 구분된 단일 문자열로 반환해야 합니다.
+
+            예시 출력 형식:
+                1) 주소가 존재할 때는:
+                서울특별시 종로구 세종대로 99 - 광화문, 제주특별자치도 서귀포시 중문관광로 72번길 34 - 천지연 폭포
+
+                2) 주소가 존재하지 않을 때는:
+                남산타워, 불국사, 경복궁
+
+            주의사항
+            - 주소와 장소명은 반드시 대시 기호(-)로 구분합니다.
+            - 주소 정보가 명확하지 않은 경우(예: 일부 정보만 제공된 경우), 해당 정보를 주소 없는 장소로 분류하세요.
+            - 정확한 추출을 위해 각 장소가 정확히 분리되어 있는지 확인하세요.
+
+            본문:
+            {text}
+
+            주소 - 장소명:
+            """
 
     # 클로바 API 실행
     completion_executor = CompletionExecutor(
@@ -79,30 +84,24 @@ def extract_place_names(text):
     )
 
     try:
-        place_names = []
+        # 변환된 리스트를 저장할 새 리스트
+        converted_addresses = []
         result = completion_executor.execute(prompt)
         content = result.get('result', {}).get('message', {}).get('content', 'No content found')
         if content:
-            if content.startswith('장소명:'):
-                content = content.replace('장소명:', '')
-            place_names = [place.strip() for place in content.replace('-', '').replace('\n', ',').split(',') if place.strip()]
-        return place_names
+            place_names = [place.strip() for place in content.split(',') if place.strip()]
+
+            # 각 주소를 변환
+            for address in place_names:
+                # '-'를 ','로 바꾸고 변환된 결과를 리스트에 추가
+                converted_address = address.replace(' - ', ', ')
+                converted_addresses.append(converted_address)
+        return converted_addresses
 
     except KeyError as e:
         raise Exception(f"KeyError: {e} - The expected key was not found in the result.")
     except Exception as e:
         raise Exception(f"An unexpected error occurred: {e}")
-
-
-# URL 유효성 검사
-def is_valid_url(url):
-    try:
-        response = requests.head(url)
-        response.raise_for_status()  # HTTP 오류 발생 시 예외 발생
-        return response.status_code == 200
-    except requests.RequestException as e:
-        print(f"URL validation error: {e}")
-        return False
 
 
 # 카카오맵 API, 장소 검색
@@ -136,10 +135,36 @@ def extract_content_instagram(url):
         raise Exception(f"An unexpected error occurred: {e}")
 
 
+def clear_keyword_list(keyword_list, temp):
+    # '*' 및 불필요한 공백을 제거한 후 저장할 새로운 리스트
+    def clean_text(text):
+        # '*' 제거 및 쉼표 앞뒤 공백 제거
+        return ','.join([part.rstrip() for part in text.replace('*', '').split(',')])
+
+    # `keyword_list`와 `temp`의 요소를 정리한 리스트 생성
+    cleaned_keyword_list = [clean_text(item) for item in keyword_list]
+    cleaned_temp = [clean_text(item) for item in temp]
+
+    # 기존 `cleaned_keyword_list`의 장소명을 추출하여 중복 확인을 위한 집합 생성
+    existing_places = set()
+    for entry in cleaned_keyword_list:
+        if ',' in entry:
+            place_name = entry.split(', ')[-1]  # 쉼표 뒤의 장소명 추출
+            existing_places.add(place_name)
+
+    # `cleaned_temp` 리스트에서 중복되지 않는 항목 추가
+    for item in cleaned_temp:
+        if ',' in item:
+            place_name = item.split(', ')[-1]  # 쉼표 뒤의 장소명 추출
+            if place_name not in existing_places:
+                cleaned_keyword_list.append(item)
+
+    return cleaned_keyword_list
+
+
 def extract_place_keywords_from_naver(soup, text):
     name_list = []
     addr_list = []
-    keyword_list = []
 
     # 블로그 본문에 지도가 첨부되어 있는 경우: strong, p 태그의 장소명, 주소 데이터 추출
     strong_tag_name_list = soup.find_all('strong', class_='se-map-title')
@@ -151,14 +176,15 @@ def extract_place_keywords_from_naver(soup, text):
         for place_addr in p_tag_addr_list:
             addr_list.append(place_addr.get_text(strip=True))
 
-        keyword_list = [f"{addr}, {name}" for name, addr in zip(name_list, addr_list)]
+        temp_keyword = [f"{addr}, {name}" for name, addr in zip(name_list, addr_list)]
+        temp = extract_place_names(text)
+        keyword_list = clear_keyword_list(temp_keyword, temp)
 
     # 블로그 본문에 지도가 첨부되어 있지 않는 경우: 클로바 API 호출하기
     else:
         temp = extract_place_names(text)
-        keyword_list = extract_place_names(temp)
-
-    print(keyword_list)
+        temp_keyword = extract_place_names(temp)
+        keyword_list = clear_keyword_list(temp_keyword, [])
 
     return keyword_list
 
@@ -201,18 +227,8 @@ def extract_content_naver(main_url):
         return title_text, content_text, keyword_list
 
     except requests.RequestException as e:
-        raise Exception(f"HTTP Request error: {e}")
+        raise Exception(f"HTTP Request error: {str(e)}")
     except ValueError as e:
-        raise Exception(f"ValueError: {e} - Check if the iframe is correctly extracted.")
+        raise Exception(f"ValueError: {str(e)} - Check if the iframe is correctly extracted.")
     except Exception as e:
-        raise Exception(f"An unexpected error occurred: {e}")
-
-
-# def crawl_and_extract_places(places):
-#     try:
-#         # 복합적으로 추출된 장소명 분리
-#         separated_places = places.split(', ')
-#
-#         return separated_places
-#     except Exception as e:
-#         raise Exception(f"An error occurred while extracting places: {e}")
+        raise Exception(f"An unexpected error occurred: {str(e)}")
