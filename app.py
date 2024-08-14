@@ -85,8 +85,16 @@ app = Flask(__name__)
 #         return error_response, 500  # Internal Server Error
 
 ## RabbitMQ 관련 설정
+credentials = pika.PlainCredentials(os.getenv('RABBITMQ_USERNAME'), os.getenv('RABBITMQ_PASSWORD'))
+parameters = pika.ConnectionParameters(
+    host='localhost',
+    port=5672,  
+    virtual_host='/',  
+    credentials=credentials
+)
 
-connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+# RabbitMQ 서버에 연결
+connection = pika.BlockingConnection(parameters)
 channel = connection.channel()
 
 # 큐 선언
