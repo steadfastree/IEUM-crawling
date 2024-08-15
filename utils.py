@@ -2,8 +2,6 @@ import os
 
 import requests
 from bs4 import BeautifulSoup
-from PyKakao import Local
-import pandas as pd
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -46,7 +44,6 @@ class CompletionExecutor:
             raise Exception(f"An unexpected error occurred: {e}")
 
 
-#
 # 장소(본문)추출 함수
 def extract_place_names(text):
     # 프롬프트 설정
@@ -59,7 +56,7 @@ def extract_place_names(text):
 
             예시 출력 형식:
                 1) 주소가 존재할 때는:
-                서울특별시 종로구 세종대로 99 - 광화문, 제주특별자치도 서귀포시 중문관광로 72번길 34 - 천지연 폭포
+                서울특별시 종로구 - 광화문, 제주특별자치도 서귀포시 - 천지연 폭포
 
                 2) 주소가 존재하지 않을 때는:
                 남산타워, 불국사, 경복궁
@@ -200,7 +197,9 @@ def extract_place_keywords_from_naver(soup, text):
 
         p_tag_addr_list = soup.find_all('p', class_='se-map-address')
         for place_addr in p_tag_addr_list:
-            addr_list.append(place_addr.get_text(strip=True))
+            str_addr = place_addr.get_text(strip=True)
+            addr = ' '.join(str_addr.split(' ')[:2])
+            addr_list.append(addr)
 
         temp_keyword = [f"{addr}, {name}" for name, addr in zip(name_list, addr_list)]
         temp = extract_place_names(text)
