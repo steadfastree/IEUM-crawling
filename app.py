@@ -110,7 +110,7 @@ MAX_RETRY_COUNT = 3
 
 def crawling_task(msg):
         crawling_collection = msg
-        user_uuid = str(crawling_collection.get("userUuid"))
+        user_id = str(crawling_collection.get("userId"))
         link_type = int(crawling_collection.get("collectionType"))
         main_url = str(crawling_collection.get("link"))
 
@@ -123,7 +123,7 @@ def crawling_task(msg):
             if places != ['장소명이 존재하지 않습니다.']:
                 cleaned_keyword_list = clear_keyword_list(places, [])
                 response = {
-                    "userUuid": user_uuid,
+                    "userId": user_id,
                     "collectionType": link_type,
                     "link": main_url,
                     "content": content,
@@ -137,7 +137,7 @@ def crawling_task(msg):
             content, main_content, keyword_list = extract_content_naver(main_url)
             if keyword_list != ['장소명이 존재하지 않습니다.']:
                 response = {
-                    "userUuid": user_uuid,
+                    "userId": user_id,
                     "collectionType": link_type,
                     "link": main_url,
                     "content": content,
@@ -152,7 +152,7 @@ def crawling_task(msg):
 def publish_to_result_queue(ch, method, properties, body):
     try:
         msg = json.loads(body)
-        print(f"{msg['userUuid']} 유저가 전송한 다음 링크에서 장소 키워드를 추출합니다.\n")
+        print(f"{msg['userId']} 유저가 전송한 다음 링크에서 장소 키워드를 추출합니다.\n")
         print(f"링크 :  {msg['link']}\n")
         
         result = crawling_task(msg)
