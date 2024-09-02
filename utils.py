@@ -217,6 +217,8 @@ def extract_place_keywords_from_naver(soup, text):
 # Naver 제목, 본문 추출 함수
 def extract_content_naver(main_url):
     try:
+        if 'm.blog.naver' in main_url:
+            main_url = main_url.replace('m.', '')
         # 첫 번째 요청: 메인 페이지에서 iframe URL 추출
         response = requests.get(main_url, verify=False)
         response.raise_for_status()  # HTTP 오류 발생 시 예외 발생
